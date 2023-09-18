@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
+const { SerialPort } = require('serialport');
 // bundle the js files and reference the entry points 
 const cats = {
     'codingCat': 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif',
@@ -24,6 +25,12 @@ function activate(context) {
         console.log(onDiskPath);
         // And get the special URI to use with the webview
         const styleSheet = panel.webview.asWebviewUri(onDiskPath);
+        //send msh from html when the button is clicked and then use this serial port in order to open serial port and choose the serial port
+        const port = new SerialPort({
+            path: '/dev/tty-usbserial1',
+            baudRate: 11520,
+        });
+        console.log(port);
         panel.webview.html = getWebViewContent(styleSheet);
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(message => {
@@ -86,12 +93,8 @@ function getWebViewContent(styleSheets) {
 			(function() {
 				const vscode = acquireVsCodeApi();
 
-				const button = document.getElementById("connectButtonSerial");
-				button.addEventListener('click', event => {
-					vscode.postMessage({
-						command: 'alert',
-						text: 'This script has been reached'
-					})
+				document.getElementById("connectButtonSerial").addEventListener("click",event => {
+					// Prompt user to select any serial port.
 					if(navigator.serial){
 						vscode.postMessage({
 							command: 'alert',
@@ -102,8 +105,13 @@ function getWebViewContent(styleSheets) {
 							command: 'alert',
 							text: 'No WebSerialAPI'
 						})						
-					}					
-				})
+					}	
+					vscode.postMessage({
+						command: 'alert',
+						text: 'This script has been reached'
+					})
+						
+				});
 			
 			}())		
     	</script>

@@ -29,4 +29,4 @@ document.getElementById("connectButtonSerial").addEventListener("click",async ()
     }
     
     await port.close();
-})
+});
