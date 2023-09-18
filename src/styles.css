@@ -1,0 +1,19 @@
+.textBox{
+    color: brown;
+    font-size: 20px;
+    background-color: black;
+    margin-top: 10px;
+    text-align: center;
+}
+
+div{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.buttonBox{
+    background-color: #24a177;
+    margin-inline: 20%;
+}
