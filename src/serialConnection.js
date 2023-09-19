@@ -1,3 +1,5 @@
+var Plotly = require('plotly.js-dist-min')
+
 (function() {
     const vscode = acquireVsCodeApi();
 

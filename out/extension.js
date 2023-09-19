@@ -8,6 +8,8 @@ const { SerialPort } = require('serialport');
 const { readLine } = require('@serialport/parser-readline');
 var currentPanel;
 var port;
+let uriFilePath;
+const outputData = [];
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('webview.webWorld', () => {
         if (currentPanel) {
@@ -64,6 +66,9 @@ function activate(context) {
                     stopSerialTransmission();
             }
         }, undefined, context.subscriptions);
+        uriFilePath = vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file('output.txt'),
+        });
     }));
 }
 exports.activate = activate;
@@ -95,6 +100,17 @@ function startSerialTransmission() {
     port.on('data', function (data) {
         console.log("Flowing Mode Data: ", data.toString());
         currentPanel.webview.postMessage(data.toString());
+        outputData.push(data.toString());
+        const value = 'output.txt';
+        exportDataWithConfirmation('output.txt', data.toString());
+        /*fs.writeFile(value,data.toString(),(err:any)=>{
+            if (err) {
+                void vscode.window.showErrorMessage("Could not write to file: " + value + ": " + err.message);
+                console.log(err.message);
+            } else {
+                void vscode.window.showInformationMessage("Saved " + value );
+            }
+        })*/
     });
     /*const parser = port.pipe(new ReadLine({delimiter: '\n'}));
     console.log("Waiting for data");
@@ -108,7 +124,25 @@ function stopSerialTransmission() {
     port.close();
     return;
 }
+function exportDataWithConfirmation(fileName, data) {
+    /*void vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(fileName),
+    }).then*/ ((uri) => {
+        if (uri) {
+            const value = uri.fsPath;
+            fs.writeFile(value, data, (error) => {
+                if (error) {
+                    void vscode.window.showErrorMessage("Could not write to file: " + value + ": " + error.message);
+                }
+                else {
+                    void vscode.window.showInformationMessage("Saved " + value);
+                }
+            });
+        }
+    });
+}
 // This method is called when your extension is deactivated
-function deactivate() { }
+function deactivate() {
+}
 exports.deactivate = deactivate;
 //# sourceMappingURL=extension.js.map

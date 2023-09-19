@@ -1,0 +1,3 @@
+>rotationX:0.86
+>rotationY:0.14
+>rotationZ:-0.21

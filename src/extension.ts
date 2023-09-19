@@ -7,6 +7,8 @@ const {readLine} = require('@serialport/parser-readline');
 
 var currentPanel:vscode.WebviewPanel;
 var port: any;
+let uriFilePath: any; 
+const outputData: string[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -79,7 +81,12 @@ export function activate(context: vscode.ExtensionContext) {
 				},
 				undefined,
 				context.subscriptions
-			);		
+			);	
+			
+			uriFilePath = vscode.window.showSaveDialog({
+					defaultUri: vscode.Uri.file('output.txt'),
+			});
+
 		})
 	
 	);
@@ -113,6 +120,20 @@ function startSerialTransmission() {
 	port.on('data',function(data:any){
 		console.log("Flowing Mode Data: ",data.toString());
 		currentPanel.webview.postMessage(data.toString());
+
+		outputData.push(data.toString());
+
+		const value = 'output.txt';
+		exportDataWithConfirmation('output.txt',data.toString());
+
+		/*fs.writeFile(value,data.toString(),(err:any)=>{
+			if (err) {
+				void vscode.window.showErrorMessage("Could not write to file: " + value + ": " + err.message);
+				console.log(err.message);
+			} else {
+				void vscode.window.showInformationMessage("Saved " + value );
+			}
+		})*/
 	});
 
 	/*const parser = port.pipe(new ReadLine({delimiter: '\n'}));
@@ -129,6 +150,25 @@ function stopSerialTransmission(){
 	return;
 }
 
+function exportDataWithConfirmation(fileName: string, data: string): void {
+	/*void vscode.window.showSaveDialog({
+		defaultUri: vscode.Uri.file(fileName),
+	}).then*/((uri: vscode.Uri | undefined) => {
+		if (uri) {
+			const value = uri.fsPath;
+			fs.writeFile(value, data, (error:any) => {
+				if (error) {
+					void vscode.window.showErrorMessage("Could not write to file: " + value + ": " + error.message);
+				} else {
+					void vscode.window.showInformationMessage("Saved " + value );
+				}
+			});
+		}
+	});
+}
+
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+
+}
 

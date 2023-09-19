@@ -35,12 +35,13 @@
 					<button id="connectButtonSerial", type="button">Connect via Serial Port</button>
 					<span id="serialText", class="textBox">Click to open serial port at COM4.</span>
 				</div>
+				<div id="3dPlot"></div>
 			</div>    
 		</section>
 
-        <script src="./serialConnection.js"></script>
+    	<!-- <script src="./serialConnection.js"></script>  -->
 
-		<!--<script>
+		<script> 
 			(function() {
 				const vscode = acquireVsCodeApi();
 
@@ -76,7 +77,7 @@
 				let message = event.data;
 				document.getElementById("serialText").textContent = message;
 			});		
-    	</script>-->
+    	</script>
 
 	</body>
 	</html>
