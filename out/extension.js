@@ -3,11 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
 const { SerialPort } = require('serialport');
-// bundle the js files and reference the entry points 
-const cats = {
-    'codingCat': 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif',
-    'compilingCat': 'https://media.giphy.com/media/mlvseq9yvZhba/giphy.gif'
-};
+const { readLine } = require('@serialport/parser-readline');
+var currentPanel;
+var port;
 function activate(context) {
     console.log('Congratulations, your extension "webview" is now active!');
     let disposable = vscode.commands.registerCommand('webview.helloWorld', () => {
@@ -20,30 +18,73 @@ function activate(context) {
             // Enable scripts in the webview
             enableScripts: true
         });
+        currentPanel = panel;
         // Get path to resource on disk
         const onDiskPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'styles.css');
         console.log(onDiskPath);
         // And get the special URI to use with the webview
         const styleSheet = panel.webview.asWebviewUri(onDiskPath);
-        //send msh from html when the button is clicked and then use this serial port in order to open serial port and choose the serial port
-        const port = new SerialPort({
-            path: '/dev/tty-usbserial1',
-            baudRate: 11520,
-        });
-        console.log(port);
         panel.webview.html = getWebViewContent(styleSheet);
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(message => {
             switch (message.command) {
                 case 'alert':
-                    vscode.window.showErrorMessage(message.text);
+                    vscode.window.showInformationMessage(message.text);
                     console.log(message.text);
                     return;
+                case 'serialStart':
+                    vscode.window.showInformationMessage(message.text);
+                    console.log("Reached here");
+                    startSerialTransmission();
+                case 'serialStop':
+                    vscode.window.showInformationMessage(message.text);
+                    stopSerialTransmission();
             }
         }, undefined, context.subscriptions);
     }));
 }
 exports.activate = activate;
+function startSerialTransmission() {
+    //send msh from html when the button is clicked and then use this serial port in order to open serial port and choose the serial port
+    console.log("reached serial function");
+    port = new SerialPort({
+        path: 'COM4',
+        baudRate: 115200,
+    }, function (err) {
+        console.log("reached inner function");
+        if (err) {
+            console.log("error");
+        }
+        else {
+            console.log("Opening serial port");
+        }
+    });
+    console.log("Port Created next steop reading");
+    port.on('readable', function () {
+        let newData = port.read();
+        if (newData === null) {
+            console.log("No Data");
+        }
+        else {
+            console.log("Readble Mode Data: ", port.read());
+        }
+    });
+    port.on('data', function (data) {
+        console.log("Flowing Mode Data: ", data.toString());
+        currentPanel.webview.postMessage(data.toString());
+    });
+    /*const parser = port.pipe(new ReadLine({delimiter: '\n'}));
+    console.log("Waiting for data");
+    parser.on('data',function(data:any){
+        console.log(data);
+        currentPanel.webview.postMessage(data.toString());
+    });*/
+    return;
+}
+function stopSerialTransmission() {
+    port.close();
+    return;
+}
 // This method is called when your extension is deactivated
 function deactivate() { }
 exports.deactivate = deactivate;
@@ -77,14 +118,14 @@ function getWebViewContent(styleSheets) {
 		<section>
 			<div class="buttonBox">
 				<div>
-					<button id="connectButton", type="button">Connect to BLE</button>
-					<span id="bluetoothText", class="textBox">jlskjaklsjfkl jaslkjfklajsklfjaskjfkas</span>
+					<button id="connectButton", type="button">Disconnect</button>
+					<span id="bluetoothText", class="textBox">Click to disconnect the serial port.</span>
 				</div>  
 			<br>
 			<br>
 				<div>
 					<button id="connectButtonSerial", type="button">Connect via Serial Port</button>
-					<span id="serialText", class="textBox">jlskjaklsjfkl jaslkjfklajsklfjaskjfkas</span>
+					<span id="serialText", class="textBox">Click to open serial port at COM4.</span>
 				</div>
 			</div>    
 		</section>
@@ -107,13 +148,24 @@ function getWebViewContent(styleSheets) {
 						})						
 					}	
 					vscode.postMessage({
-						command: 'alert',
-						text: 'This script has been reached'
+						command: 'serialStart',
+						text: 'Requesting and Opening Serial Port'
 					})
 						
 				});
+
+				document.getElementById("connectButton").addEventListener("click",event => {
+					vscode.postMessage({
+						command: 'serialStop',
+						text: 'Closing Serial Port'
+					})		
+				});
 			
-			}())		
+			}())
+			window.addEventListener('message',event => {
+				let message = event.data;
+				document.getElementById("serialText").textContent = message;
+			});		
     	</script>
 
 	</body>
