@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+
 const {SerialPort} = require('serialport');
 const {readLine} = require('@serialport/parser-readline');
 
@@ -7,36 +10,55 @@ var port: any;
 
 export function activate(context: vscode.ExtensionContext) {
 
-	console.log('Congratulations, your extension "webview" is now active!');
-
-	let disposable = vscode.commands.registerCommand('webview.helloWorld', () => {
-		vscode.window.showInformationMessage('Hello World from WebView!');
-	});
-
-	context.subscriptions.push(disposable);
-
 	context.subscriptions.push(
 		vscode.commands.registerCommand('webview.webWorld', () => {
-			 // Create and show panel
-			let panel = vscode.window.createWebviewPanel(
-				'webview',
-				'Web View',
-				vscode.ViewColumn.One,
-				{
-					// Enable scripts in the webview
-					enableScripts: true
-				}
+
+			if(currentPanel){
+				currentPanel.reveal(vscode.ViewColumn.One);
+				return;
+			}
+ 			// Create and show panel
+ 			const panel = vscode.window.createWebviewPanel(
+					'webview',
+					'Web View',
+					vscode.ViewColumn.One,
+					{
+
+						// Enable scripts in the webview
+						enableScripts: true
+					}
 			);
 			currentPanel = panel;
-			// Get path to resource on disk
-			const onDiskPath = vscode.Uri.joinPath(context.extensionUri,'src','styles.css');
-			console.log(onDiskPath);
-			// And get the special URI to use with the webview
-			const styleSheet = panel.webview.asWebviewUri(onDiskPath);
 
-			panel.webview.html = getWebViewContent(styleSheet);
+			fs.readFile(path.join(context.extensionPath,'src','index.html'),(err,data) => {
+				if(err){console.log(err);}
+				let rawHTML = data.toString();
 
-			      // Handle messages from the webview
+				const hrefList = rawHTML.match(/href\=\"(.*)\"/g);
+				if(hrefList != null){
+					for(let src of [...hrefList]){
+						let url = src.split("\"")[1];
+						// Get path to resource on disk
+						const onDiskPath = vscode.Uri.joinPath(context.extensionUri,'./src/'+url);
+						// And get the special URI to use with the webview
+						const styleSheet = panel.webview.asWebviewUri(onDiskPath);
+						const toReplace = src.replace(url,styleSheet.toString());
+						console.log(url, onDiskPath ,styleSheet );
+						rawHTML = rawHTML.replace(src, toReplace);
+					}
+				}
+
+				panel.webview.html = rawHTML;
+			});
+
+			//panel.webview.html = getWebViewContent(styleSheet);
+			panel.onDidDispose(() => {
+				port.on('open', () => {
+					stopSerialTransmission();
+				});
+			});
+			
+			// Handle messages from the webview
 			panel.webview.onDidReceiveMessage(
 				message => {
 					switch (message.command) {
@@ -107,90 +129,4 @@ function stopSerialTransmission(){
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
-
-function getWebViewContent(styleSheets: vscode.Uri){
-	return `<!DOCTYPE html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="X-UA-Compatible" content="ie=edge">
-		<link rel="stylesheet" href="${styleSheets}">
-		<title>NiclaSense WebApp</title>   
-	</head>
-	<body>
-		<header>
-			<h1 id="main-header">NICLA WebApp Javascript</h1>
-			<hr>
-			<p class="name">This sample illustrates the use of the Web Bluetooth API and Web Serial APT 
-				to retrieve sensor information from a nearby NICLA SENSE ME which is a 
-				Bluetooth Low Energy Device.</p>
-		</header>
-		
-		<h3>GIT REPOSITORIES USED:</h3>
-		<nav>
-			<ul>
-				<li><a href="https://developer.chrome.com/articles/bluetooth/">WebBluetooth API</a></li>
-				<li><a href="https://developer.chrome.com/en/articles/serial/">WebSerial API</a></li>
-			</ul>
-		</nav>
-		<hr>
-		<section>
-			<div class="buttonBox">
-				<div>
-					<button id="connectButton", type="button">Disconnect</button>
-					<span id="bluetoothText", class="textBox">Click to disconnect the serial port.</span>
-				</div>  
-			<br>
-			<br>
-				<div>
-					<button id="connectButtonSerial", type="button">Connect via Serial Port</button>
-					<span id="serialText", class="textBox">Click to open serial port at COM4.</span>
-				</div>
-			</div>    
-		</section>
-
-		<script>
-			(function() {
-				const vscode = acquireVsCodeApi();
-
-				document.getElementById("connectButtonSerial").addEventListener("click",event => {
-					// Prompt user to select any serial port.
-					if(navigator.serial){
-						vscode.postMessage({
-							command: 'alert',
-							text: 'WebSerialAPI is available'
-						})
-					} else {
-						vscode.postMessage({
-							command: 'alert',
-							text: 'No WebSerialAPI'
-						})						
-					}	
-					vscode.postMessage({
-						command: 'serialStart',
-						text: 'Requesting and Opening Serial Port'
-					})
-						
-				});
-
-				document.getElementById("connectButton").addEventListener("click",event => {
-					vscode.postMessage({
-						command: 'serialStop',
-						text: 'Closing Serial Port'
-					})		
-				});
-			
-			}())
-			window.addEventListener('message',event => {
-				let message = event.data;
-				document.getElementById("serialText").textContent = message;
-			});		
-    	</script>
-
-	</body>
-	</html>`;
-}
-
-
 
