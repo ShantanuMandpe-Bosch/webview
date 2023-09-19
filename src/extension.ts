@@ -34,16 +34,18 @@ export function activate(context: vscode.ExtensionContext) {
 				if(err){console.log(err);}
 				let rawHTML = data.toString();
 
+				// Replace all urls
+				const srcList = rawHTML.match(/src\=\"(.*)\"/g);
 				const hrefList = rawHTML.match(/href\=\"(.*)\"/g);
-				if(hrefList != null){
-					for(let src of [...hrefList]){
+				if(srcList != null && hrefList != null){
+					for(let src of [...srcList, ...hrefList]){
 						let url = src.split("\"")[1];
 						// Get path to resource on disk
 						const onDiskPath = vscode.Uri.joinPath(context.extensionUri,'./src/'+url);
 						// And get the special URI to use with the webview
-						const styleSheet = panel.webview.asWebviewUri(onDiskPath);
-						const toReplace = src.replace(url,styleSheet.toString());
-						console.log(url, onDiskPath ,styleSheet );
+						const extraSheet = panel.webview.asWebviewUri(onDiskPath);
+						const toReplace = src.replace(url,extraSheet.toString());
+						console.log(url, onDiskPath ,extraSheet );
 						rawHTML = rawHTML.replace(src, toReplace);
 					}
 				}
